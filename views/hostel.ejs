@@ -22,11 +22,18 @@
                 <td><%=rooms.room_number %></td>
                 <td><%= rooms.occupancy %></td>
                 <td><%= rooms.room_type %></td>
-                <td><form action="/select-room/<%= rooms.room_number %>" method="post"><button type="submit">Select</button></form></td>
-            </tr>
+               <td>
+  <% if (locked_rooms.includes(rooms.room_number)) { %>
+    <p class="small" style="color:red">OCCUPIED</p>
+  <% } else { %>
+    <form action="/select-room/<%= rooms.room_number %>" method="post">
+      <button type="submit">Select</button>
+    </form>
+  <% } %>
+</td>
 
-        
-        
+            </tr>
+      
         <% }) %>
                             </table>
 

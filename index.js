@@ -37,10 +37,37 @@ app.get("/",async(req,res)=>{
     res.render("home.ejs",{hostels:data});
 })
 
-app.get("/hostel/:id",async(req,res)=>{
-    const {data,error} = await supabase.from("rooms").select("*").eq("hostel_id",req.params.id);
-    return res.render("hostel.ejs",{rooms:data});
-})
+app.get("/hostel/:id", async (req, res) => {
+  try {
+    // 1. Fetch data and handle database errors immediately
+    const { data: rooms, error } = await supabase
+      .from("rooms")
+      .select("*")
+      .eq("hostel_id", req.params.id);
+
+    if (error || !rooms) {
+      console.error("Database error:", error);
+      return res.status(500).send("Error fetching hostel data");
+    }
+
+    // 2. Efficiently filter locked rooms without creating array holes
+    const locked_rooms = [];
+    for (let i = 0; i < rooms.length; i++) {
+      const isCached = client.get(rooms[i].room_number);
+      if (isCached) {
+        locked_rooms.push(rooms[i].room_number);
+      }
+    }
+
+    // 3. Render the page with safe data
+    return res.render("hostel.ejs", { rooms, locked_rooms });
+
+  } catch (err) {
+    console.error("Server crash prevented:", err);
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
 
 app.post("/select-room/:room_number",async(req,res)=>{
     const room_number = req.params.room_number;
