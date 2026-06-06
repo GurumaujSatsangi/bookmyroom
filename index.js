@@ -15,11 +15,11 @@ const supabase = createSupabaseClient(
 )
 
 const client = createClient({
-    username: 'default',
-    password: 'RaRqOsspCJRUK1ugVwHGrGr85VZL9sYq',
+    username: process.env.REDIS_USERNAME,
+    password: process.env.REDIS_PASSWORD,
     socket: {
-        host: 'deep-supermodern-smoothtoned-15476.db.redis.io',
-        port: 13120
+        host: process.env.REDIS_HOST,
+        port: process.env.REDIS_PORT
     }
 });
 
