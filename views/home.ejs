@@ -6,6 +6,15 @@
     <title>Document</title>
 </head>
 <body>
+
+    <ul>
+    <% hostels.forEach(function(hostels){ %>
+
+
+
+        <li><a href="/hostel/<%= hostels.hostel_id %>"><%= hostels.hostel_name %></a></li>
     
+    <%  }) %>
+    </ul>
 </body>
 </html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <% if(rooms && rooms.length>0) { %>
+
+        <table style="border:1px solid black" cellpadding="10">
+            <tr>
+                <th>ROOM NUMBER</th>
+                <th>OCCUPANCY</th>
+                <th>AC / NON AC</th>
+                <th>ACTION</th>
+            </tr>
+
+        <% rooms.forEach(function(rooms){ %>
+
+            <tr>
+                <td><%=rooms.room_number %></td>
+                <td><%= rooms.occupancy %></td>
+                <td><%= rooms.room_type %></td>
+                <td><a href="/">Select</a></td>
+            </tr>
+
+        
+        
+        <% }) %>
+                            </table>
+
+    
+    <% } else { %>
+
+        <p class="small">No Rooms Available!</p>
+
+        <% } %>
+</body>
+</html>
