@@ -22,7 +22,7 @@
                 <td><%=rooms.room_number %></td>
                 <td><%= rooms.occupancy %></td>
                 <td><%= rooms.room_type %></td>
-                <td><a href="/">Select</a></td>
+                <td><form action="/select-room/<%= rooms.room_number %>" method="post"><button type="submit">Select</button></form></td>
             </tr>
 
         

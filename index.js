@@ -24,6 +24,14 @@ app.get("/hostel/:id",async(req,res)=>{
     return res.render("hostel.ejs",{rooms:data});
 })
 
+app.post("/select-room/:room_number",async(req,res)=>{
+    const room_number = req.params.room_number;
+
+    console.log("Room Number "+room_number+" has been Locked for 60 seconds!");
+
+    return res.send("CONFIRM REGISTRATION");
+})
+
 app.listen("3030",()=>{
     console.log("server running on port 3030!");
 })
