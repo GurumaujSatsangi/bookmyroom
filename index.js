@@ -69,11 +69,28 @@ app.get("/hostel/:id", async (req, res) => {
   }
 });
 
-app.get("/confirmation/:id",async(req,res)=>{
+app.get("/confirmation/:id", async (req, res) => {
   const room_number = req.params.id;
-  const {data,error} = await supabase.from("rooms").select("*").eq("room_number",room_number).single();
-  return res.render("confirm-registration.ejs",{room_number,data:data.occupancy});
-})
+  
+  const { data, error } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("room_number", room_number)
+    .single();
+
+  if (error || !data) {
+    return res.status(404).send("Room not found");
+  }
+
+  // Creates an empty array based on the occupancy number
+  const loopArray = Array.from({ length: data.occupancy });
+
+  return res.render("confirm-registration.ejs", { 
+    room_number, 
+    data: loopArray 
+  });
+});
+
 
 
 app.post("/select-room/:room_number",async(req,res)=>{
