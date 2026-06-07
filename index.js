@@ -53,7 +53,8 @@ app.get("/hostel/:id", async (req, res) => {
     // 2. Efficiently filter locked rooms without creating array holes
     const locked_rooms = [];
     for (let i = 0; i < rooms.length; i++) {
-      const isCached = client.get(rooms[i].room_number);
+      const isCached = await client.get(rooms[i].room_number);
+      console.log(isCached);
       if (isCached) {
         locked_rooms.push(rooms[i].room_number);
       }
@@ -68,12 +69,18 @@ app.get("/hostel/:id", async (req, res) => {
   }
 });
 
+app.get("/confirmation/:id",async(req,res)=>{
+  const room_number = req.params.id;
+  const {data,error} = await supabase.from("rooms").select("*").eq("room_number",room_number).single();
+  return res.render("confirm-registration.ejs",{room_number,data:data.occupancy});
+})
+
 
 app.post("/select-room/:room_number",async(req,res)=>{
     const room_number = req.params.room_number;
-    await client.set(room_number,"23BCE0474",{EX:60});
+    await client.set(room_number,"23BCE0474",{EX:1800});
     console.log("Room Number "+room_number+" has been Locked for 60 seconds!");
-    return res.send("CONFIRM REGISTRATION");
+    return res.redirect("/confirmation/"+room_number);
 })
 
 app.listen("3030",()=>{
