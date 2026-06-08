@@ -3,6 +3,7 @@ import session from 'express-session';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv';
 import { createClient } from "redis";
+import neo4j from 'neo4j-driver';
 
 
 dotenv.config();
@@ -23,12 +24,75 @@ const client = createClient({
     }
 });
 
+
+  // URI examples: 'neo4j://localhost', 'neo4j+s://xxx.databases.neo4j.io'
+  const URI = process.env.NEO4J_URI
+  const USER = process.env.NEO4J_USERNAME
+  const PASSWORD = process.env.NEO4J_PASSWORD
+  const driver = neo4j.driver(URI, neo4j.auth.basic(USER, PASSWORD))
+
+
 client.on('error', err => console.log('Redis Client Error', err));
 
 await client.connect();
 
 
+app.get("/roommates",async(req,res)=>{
 
+  return res.render("add-friends.ejs");
+
+})
+
+app.post("/add-friend",async(req,res)=>{
+  const registration_number = '23BCE0474';
+  const friend_registration_number = '23BDS0081';
+  const session = driver.session();
+
+  try {
+    // 3. The Cypher Query (Parameterized for security)
+    const query = `
+      MATCH (sender:User {username: $sender})
+      MATCH (target:User {username: $target})
+      
+      WHERE count { (sender)-[:FRIENDS_WITH]-() } = 0
+      
+      // Create the request
+      MERGE (sender)-[req:REQUESTS_TO_FOLLOW]->(target)
+      ON CREATE SET req.timestamp = datetime()
+      
+      RETURN req
+    `;
+
+    const result = await session.run(query, {
+      sender: registration_number,
+      target: friend_registration_number
+    });
+
+    // 4. Handle the Database Response
+    if (result.records.length === 0) {
+      // The WHERE clause failed, meaning the sender already has a friend, 
+      // or one of the users doesn't exist in the database.
+      return res.status(403).json({ 
+        error: "Cannot send request. You either already have a friend or the user does not exist." 
+      });
+    }
+
+    // Success!
+    return res.status(200).json({ 
+      message: `Friend request sent to ${friend_registration_number}!` 
+    });
+
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  } finally {
+    // Always close the session to free up database connections
+    await session.close();
+  }
+
+
+  
+})
 
 app.get("/",async(req,res)=>{
 
