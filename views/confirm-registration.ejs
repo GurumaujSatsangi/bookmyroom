@@ -7,14 +7,27 @@
 </head>
 <body>
 
-    <form select="/confirm-booking/<%= room_number %>" method="post">
-
-    <% for(let i = 0;i<data.length;i++) { %>
-
-        <input type="email" placeholder="Email ID of Roommate-<%= i+1 %>">
+    <form action="/confirm-booking/<%= room_number %>" method="post">
         
-    
-    <% } %>
+        <h3>Your Friends:</h3>
+
+        <% if (friends && friends.length > 0) { %>
+            <ul>
+                <% friends.forEach(function(friend) { %>
+                    <li>
+                        <% if (friend.profilePic) { %>
+                            <img src="<%= friend.profilePic %>" alt="Profile picture" width="30" height="30" style="border-radius: 50%;">
+                        <% } %>
+                        <span><%= friend.username %></span>
+                        
+                        </li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>You currently have no friends to add to this booking.</p>
+        <% } %>
+
+        <button type="submit">Confirm Booking</button>
     </form>
     
 </body>

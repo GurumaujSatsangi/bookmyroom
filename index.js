@@ -136,31 +136,66 @@ app.get("/hostel/:id", async (req, res) => {
 app.get("/confirmation/:id", async (req, res) => {
   const room_number = req.params.id;
   
-  const { data, error } = await supabase
-    .from("rooms")
-    .select("*")
-    .eq("room_number", room_number)
-    .single();
+  try {
+    // 1. Fetch Room Data from Supabase
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("*")
+      .eq("room_number", room_number)
+      .single();
 
-  if (error || !data) {
-    return res.status(404).send("Room not found");
+    if (error || !data) {
+      return res.status(404).send("Room not found");
+    }
+
+    // 2. Fetch Friends from Neo4j
+    const session = driver.session();
+    let friends = [];
+
+    try {
+      // I added ALIASES (AS username, AS profilePic) to make data extraction easier,
+      // and parameterized the username string to follow Neo4j best practices.
+      const query = `
+        MATCH (u:User {username: $username})-[:FRIENDS_WITH]-(friend:User)
+        RETURN friend.username AS username, friend.profilePic AS profilePic
+      `;
+      
+      const result = await session.run(query, { username: '23BCE0474' });
+
+      // Clean the raw Neo4j result into a standard JavaScript array of objects
+      friends = result.records.map(record => ({
+        username: record.get('username'),
+        profilePic: record.get('profilePic')
+      }));
+
+    } finally {
+      // CRITICAL: Always close the session to prevent memory leaks and crashes
+      await session.close();
+    }
+
+    // 3. Prepare Data for EJS
+    // Creates an empty array based on the occupancy number
+    const loopArray = Array.from({ length: data.occupancy });
+
+    return res.render("confirm-registration.ejs", { 
+      room_number, 
+      data: loopArray,
+      friends: friends // Pass the clean array instead of the raw result
+    });
+
+  } catch (serverError) {
+    // Catch any unexpected errors (e.g., Neo4j goes down)
+    console.error("Confirmation Route Error:", serverError);
+    return res.status(500).send("Internal Server Error");
   }
-
-  // Creates an empty array based on the occupancy number
-  const loopArray = Array.from({ length: data.occupancy });
-
-  return res.render("confirm-registration.ejs", { 
-    room_number, 
-    data: loopArray 
-  });
 });
 
 
 
 app.post("/select-room/:room_number",async(req,res)=>{
     const room_number = req.params.room_number;
-    await client.set(room_number,"23BCE0474",{EX:1800});
-    console.log("Room Number "+room_number+" has been Locked for 60 seconds!");
+    await client.set(room_number,"23BCE0474",{EX:300});
+    console.log("Room Number "+room_number+" has been Locked for 5 minutes!");
     return res.redirect("/confirmation/"+room_number);
 })
 
