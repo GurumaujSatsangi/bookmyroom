@@ -131,6 +131,21 @@ app.get("/",async(req,res)=>{
     res.render("home.ejs",{hostels:data});
 })
 
+app.get("/new-application",async(req,res)=>{
+  return res.render("new-application.ejs");
+})
+
+app.get("/check-status-of-existing-application",async(req,res)=>{
+  return res.render("status.ejs");
+})
+
+app.post("/api/check-status",async(req,res)=>{
+  const {id} = req.body;
+  const {data,error} = await supabase.from("applications").select("application_status").eq("id",id).single();
+  console.log(data);
+  res.render("view-status.ejs",{status:data})
+})  
+
 app.get("/hostel/:id", async (req, res) => {
   try {
     // 1. Fetch data and handle database errors immediately
