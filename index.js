@@ -40,14 +40,31 @@ client.on('error', err => console.log('Redis Client Error', err));
 
 await client.connect();
 
-app.post("/send",async(req,res)=>{
+app.post("/send", async (req, res) => {
+  // Check if req.body exists before destructuring
+  if (!req.body || !req.body.application_id) {
+    return res.status(400).send("Error: Missing application_id in request body");
+  }
 
-  const {application_id} = req.body;
+  const { application_id } = req.body;
 
-  const {data,error} = await supabase.from("applications").select("*").eq("id",application_id).single();
+  try {
+    const { data, error } = await supabase
+      .from("applications")
+      .select("*")
+      .eq("id", application_id)
+      .single();
 
-  return res.send(data.application_name+" - "+data.application_status);
-})
+    if (error || !data) {
+      return res.status(404).send("Application not found");
+    }
+
+    return res.send(data.application_name + " - " + data.application_status);
+  } catch (err) {
+    return res.status(500).send("Internal server error");
+  }
+});
+
 
 
 app.get("/roommates",async(req,res)=>{
