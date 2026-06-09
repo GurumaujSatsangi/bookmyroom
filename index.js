@@ -4,11 +4,15 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv';
 import { createClient } from "redis";
 import neo4j from 'neo4j-driver';
+import bodyParser from 'body-parser';
+
 
 
 dotenv.config();
 
 const app = express();
+app.use(express.json());
+
 
 const supabase = createSupabaseClient(
   process.env.SUPABASE_URL,
@@ -35,6 +39,15 @@ const client = createClient({
 client.on('error', err => console.log('Redis Client Error', err));
 
 await client.connect();
+
+app.post("/send",async(req,res)=>{
+
+  const {application_id} = req.body;
+
+  const {data,error} = await supabase.from("applications").select("*").eq("id",application_id).single();
+
+  return res.send(data.application_name+" - "+data.application_status);
+})
 
 
 app.get("/roommates",async(req,res)=>{
