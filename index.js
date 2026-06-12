@@ -131,7 +131,16 @@ app.get("/",async(req,res)=>{
     const message = req.query.message;
     const {data,error} = await supabase.from("hostels").select("*");
 
-    res.render("home.ejs",{hostels:data,message:null || message});
+    const cache_data = await client.get("hostels");
+    console.log(cache_data);
+
+    if(cache_data){
+      res.render("home.ejs",{hostels:JSON.parse(cache_data),message:null || message});
+    } else{
+    await client.set("hostels",JSON.stringify(data));
+      res.render("home.ejs",{hostels:data,message:null || message});
+
+    }
 })
 
 app.get("/hostel/:id", async (req, res) => {
