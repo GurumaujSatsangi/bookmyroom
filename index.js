@@ -131,21 +131,6 @@ app.get("/",async(req,res)=>{
     res.render("home.ejs",{hostels:data});
 })
 
-app.get("/new-application",async(req,res)=>{
-  return res.render("new-application.ejs");
-})
-
-app.get("/check-status-of-existing-application",async(req,res)=>{
-  return res.render("status.ejs");
-})
-
-app.post("/api/check-status",async(req,res)=>{
-  const {id} = req.body;
-  const {data,error} = await supabase.from("applications").select("application_status").eq("id",id).single();
-  console.log(data);
-  res.render("view-status.ejs",{status:data})
-})  
-
 app.get("/hostel/:id", async (req, res) => {
   try {
     // 1. Fetch data and handle database errors immediately
@@ -154,23 +139,29 @@ app.get("/hostel/:id", async (req, res) => {
       .select("*")
       .eq("hostel_id", req.params.id);
 
+
+
     if (error || !rooms) {
       console.error("Database error:", error);
       return res.status(500).send("Error fetching hostel data");
     }
 
     // 2. Efficiently filter locked rooms without creating array holes
-    const locked_rooms = [];
+
+    const room_number_and_ttl = new Map([]);
+
+
     for (let i = 0; i < rooms.length; i++) {
       const isCached = await client.get(rooms[i].room_number);
       console.log(isCached);
       if (isCached) {
-        locked_rooms.push(rooms[i].room_number);
+        const ttl = await client.ttl(rooms[i].room_number)
+        room_number_and_ttl.set(rooms[i].room_number,ttl)
       }
     }
 
     // 3. Render the page with safe data
-    return res.render("hostel.ejs", { rooms, locked_rooms });
+    return res.render("hostel.ejs", { rooms, room_number_and_ttl});
 
   } catch (err) {
     console.error("Server crash prevented:", err);
@@ -193,33 +184,6 @@ app.get("/confirmation/:id", async (req, res) => {
       return res.status(404).send("Room not found");
     }
 
-    // 2. Fetch Friends from Neo4j
-    const session = driver.session();
-    let friends = [];
-
-    try {
-      // I added ALIASES (AS username, AS profilePic) to make data extraction easier,
-      // and parameterized the username string to follow Neo4j best practices.
-      const query = `
-        MATCH (u:User {username: $username})-[:FRIENDS_WITH]-(friend:User)
-        RETURN friend.username AS username, friend.profilePic AS profilePic
-      `;
-      
-      const result = await session.run(query, { username: '23BCE0474' });
-
-      // Clean the raw Neo4j result into a standard JavaScript array of objects
-      friends = result.records.map(record => ({
-        username: record.get('username'),
-        profilePic: record.get('profilePic')
-      }));
-
-    } finally {
-      // CRITICAL: Always close the session to prevent memory leaks and crashes
-      await session.close();
-    }
-
-    // 3. Prepare Data for EJS
-    // Creates an empty array based on the occupancy number
     const loopArray = Array.from({ length: data.occupancy });
 
     return res.render("confirm-registration.ejs", { 

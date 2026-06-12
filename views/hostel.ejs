@@ -23,7 +23,11 @@
                 <td><%= rooms.occupancy %></td>
                 <td><%= rooms.room_type %></td>
                <td>
-  <% if (locked_rooms.includes(rooms.room_number)) { %>
+  <% if (room_number_and_ttl.has(rooms.room_number)) { %>
+    <p class="small" style="color: orange">LOCKED FOR <%= room_number_and_ttl.get(rooms.room_number) %> SECONDS</p>
+
+<% } else if(rooms.status == 'OCCUPIED') { %>
+
     <p class="small" style="color:red">OCCUPIED</p>
   <% } else { %>
     <form action="/select-room/<%= rooms.room_number %>" method="post">

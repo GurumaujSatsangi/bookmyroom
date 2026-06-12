@@ -9,10 +9,11 @@
     <h4>New Application</h4><hr>
     <form action="/api/new-application" method="post">
 
-        <input type="text">
-        <select><option>A</option></select>
-        <select><option>A-1</option></select>
-        <input type="date">
+        <input nam="applicant_name" type="text">
+        <select name="region"><option value="A">A</option></select>
+        <select name="branch"><option value="A-1">A-1</option></select>
+        <input name="dob" type="date">
+        <button type="submit">Submit Application</button>
 
     </form>
     
