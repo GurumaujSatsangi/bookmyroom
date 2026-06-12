@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { createClient } from "redis";
 import neo4j from 'neo4j-driver';
 import bodyParser from 'body-parser';
+import AWS from 'aws-sdk';
 
 
 
@@ -126,9 +127,11 @@ app.post("/add-friend",async(req,res)=>{
 
 app.get("/",async(req,res)=>{
 
+
+    const message = req.query.message;
     const {data,error} = await supabase.from("hostels").select("*");
 
-    res.render("home.ejs",{hostels:data});
+    res.render("home.ejs",{hostels:data,message:null || message});
 })
 
 app.get("/hostel/:id", async (req, res) => {
@@ -177,27 +180,110 @@ app.get("/confirmation/:id", async (req, res) => {
     const { data, error } = await supabase
       .from("rooms")
       .select("*")
-      .eq("room_number", room_number)
+      .eq("room_number", room_number).neq("status","OCCUPIED")
       .single();
 
     if (error || !data) {
-      return res.status(404).send("Room not found");
+      return res.status(404).send("ROOM NOT FOUND OR ROOM ALREADY OCCUPIED!");
     }
 
     const loopArray = Array.from({ length: data.occupancy });
 
-    return res.render("confirm-registration.ejs", { 
+    return res.render("confirmation.ejs", { 
       room_number, 
       data: loopArray,
-      friends: friends // Pass the clean array instead of the raw result
     });
 
   } catch (serverError) {
     // Catch any unexpected errors (e.g., Neo4j goes down)
-    console.error("Confirmation Route Error:", serverError);
     return res.status(500).send("Internal Server Error");
   }
 });
+
+AWS.config.update({ region: "ap-south-1" });
+var sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
+
+// This function should run in the background, independently of your API routes
+async function processBookingQueue() {
+  const params = {
+    AttributeNames: ["SentTimestamp"],
+    MaxNumberOfMessages: 1, // Process one at a time to be safe with DB updates
+    MessageAttributeNames: ["All"],
+    QueueUrl: "https://sqs.ap-south-1.amazonaws.com/281851731848/bookmyroom-queue.fifo",
+    VisibilityTimeout: 20,
+    WaitTimeSeconds: 5, // Long polling
+  };
+
+  try {
+    const data = await sqs.receiveMessage(params).promise();
+
+    if (data.Messages && data.Messages.length > 0) {
+      const message = data.Messages[0];
+      
+      // 1. Extract the room number from the SQS MESSAGE, not req.params!
+      const room_number_from_sqs = message.MessageAttributes.RoomNumber.StringValue;
+
+      // 2. Update Supabase using the queue data
+      const { data: supaData, error } = await supabase
+        .from("rooms")
+        .update({ status: "OCCUPIED" })
+        .eq("room_number", room_number_from_sqs)
+        .select();
+
+      const {data:bookingData,error:bookingError} = await supabase.from("bookings").insert("")
+
+      if (supaData) {
+        // 3. Clear cache
+        client.del(room_number_from_sqs);
+
+        // 4. Delete the message from SQS only after successful DB update
+        await sqs.deleteMessage({
+          QueueUrl: "https://sqs.ap-south-1.amazonaws.com/281851731848/bookmyroom-queue.fifo",
+          ReceiptHandle: message.ReceiptHandle,
+        }).promise();
+        
+        console.log(`Successfully processed booking for room ${room_number_from_sqs}`);
+      }
+    }
+  } catch (err) {
+    console.error("Queue Processing Error:", err);
+  }
+}
+
+
+app.post("/api/book-room/:roomnumber", async (req, res) => {
+  const room_number = req.params.roomnumber;
+
+  const params = {
+    MessageAttributes: {
+      RoomNumber: {
+        DataType: "String",
+        StringValue: room_number,
+      }
+    },
+    MessageBody: "ROOM BOOKED!",
+    MessageDeduplicationId: room_number, 
+    MessageGroupId: room_number, // Better to use a static group for chronological processing
+    QueueUrl: "https://sqs.ap-south-1.amazonaws.com/281851731848/bookmyroom-queue.fifo"
+  };
+
+  try {
+    // Note: Using .promise() assumes AWS SDK v2 to work with async/await
+    await sqs.sendMessage(params).promise(); 
+    
+    // Respond immediately! The actual booking happens in the background.
+    return res.redirect("/?message=BOOKING REQUEST RECEIVED!");
+  } catch (err) {
+    console.error("SQS Send Error:", err);
+    return res.status(500).send("Error queuing booking request");
+  }
+});
+
+
+
+
+// Example of running it constantly in your Node server:
+setInterval(processBookingQueue, 5000);
 
 
 

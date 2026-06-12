@@ -6,6 +6,11 @@
     <title>Document</title>
 </head>
 <body>
+    <% if(message) { %>
+
+        <h4 style="color:green"><%= message %></h4>
+    
+    <% } %>
     <% if(hostels && hostels.length>0){ %>
     
     <ul>

@@ -6,9 +6,11 @@
     <title>Document</title>
 </head>
 <body>
-    <form action="/api/check-status" method="post">
-        <input type="text" name="id">
-        <button type="submit">Check</button>
+    <h2>Confirm your booking for Room: <%= room_number %></h2><hr>
+    <form method="post" action="/api/book-room/<%= room_number %>">
+
+        <button type="submit">Confirm Booking</button>
+
     </form>
 </body>
 </html>
